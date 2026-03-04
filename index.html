@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Ludo">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#1a0533">
+<meta name="description" content="Le jeu de Ludo classique pour 2 à 4 joueurs">
+
+<!-- PWA Manifest -->
+<link rel="manifest" href="manifest.json">
+
+<!-- Apple Touch Icons -->
+<link rel="apple-touch-icon" href="icons/icon-152x152.png">
+<link rel="apple-touch-icon" sizes="192x192" href="icons/icon-192x192.png">
+
+<!-- Favicon -->
+<link rel="icon" type="image/png" sizes="32x32" href="icons/icon-96x96.png">
+
+<title>🎲 Ludo</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    height: 100%;
+    background: #1a0a2e;
+    font-family: 'Georgia', serif;
+    overflow: hidden;
+    touch-action: manipulation;
+  }
+  #app {
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(160deg, #1a0533 0%, #0d1b4b 50%, #0a2e1a 100%);
+  }
+
+  /* ---- INSTALL BANNER ---- */
+  #install-banner {
+    display: none;
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    background: linear-gradient(135deg, #302b63, #1a0533);
+    border-top: 2px solid rgba(255,255,255,0.15);
+    padding: 14px 20px;
+    z-index: 500;
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+  }
+  #install-banner.show { display: flex; }
+  #install-banner p { color: #fff; font-size: 13px; flex: 1; line-height: 1.4; }
+  #install-banner p span { color: #ffd700; font-weight: bold; }
+  #install-btn {
+    background: #ffd700;
+    color: #1a0533;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  #dismiss-btn {
+    background: none;
+    border: none;
+    color: rgba(255,255,255,0.5);
+    font-size: 20px;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+
+  /* ---- MENU ---- */
+  #menu {
+    text-align: center;
+    padding: 40px 24px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 24px;
+    border: 2px solid rgba(255,255,255,0.1);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    box-shadow: 0 40px 80px rgba(0,0,0,0.5);
+    max-width: 320px;
+    width: 90%;
+  }
+  #menu .dice-icon { font-size: 64px; }
+  #menu h1 {
+    font-size: 52px; font-weight: 900; color: #fff;
+    letter-spacing: -2px;
+    text-shadow: 0 0 40px rgba(255,200,50,0.5);
+    margin: 8px 0 4px;
+  }
+  #menu .sub { color: rgba(255,255,255,0.45); font-size: 15px; margin-bottom: 36px; }
+  #menu .label { color: rgba(255,255,255,0.7); font-size: 17px; margin-bottom: 20px; }
+  #menu .player-btns { display: flex; gap: 14px; justify-content: center; }
+  #menu .player-btn {
+    width: 72px; height: 72px; border-radius: 16px;
+    border: 2px solid rgba(255,255,255,0.25);
+    background: rgba(255,255,255,0.08);
+    color: #fff; font-size: 28px; font-weight: bold;
+    cursor: pointer; transition: all 0.15s; -webkit-appearance: none;
+  }
+  #menu .player-btn:active { background: rgba(255,200,50,0.3); border-color: #ffd700; transform: scale(0.93); }
+  #menu .dots { display: flex; gap: 10px; justify-content: center; margin-top: 32px; }
+  #menu .dot { width: 18px; height: 18px; border-radius: 50%; }
+
+  /* ---- GAME ---- */
+  #game {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
+  }
+  #topbar {
+    width: 100%; display: flex; align-items: center;
+    justify-content: space-between; padding: 10px 14px;
+    flex-shrink: 0; gap: 8px;
+  }
+  #topbar .title-small { font-size: 20px; font-weight: 900; color: #fff; letter-spacing: -0.5px; }
+  #msg-box {
+    flex: 1; text-align: center; font-size: 12px; font-weight: 600;
+    color: #fff; padding: 6px 10px; border-radius: 10px;
+    border: 2px solid rgba(255,255,255,0.15);
+    background: rgba(255,255,255,0.06);
+    line-height: 1.3; min-height: 36px;
+    display: flex; align-items: center; justify-content: center;
+    transition: border-color 0.3s, background 0.3s;
+  }
+  #new-game-btn {
+    background: rgba(255,255,255,0.08);
+    color: rgba(255,255,255,0.6);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 8px; font-size: 18px;
+    width: 36px; height: 36px; cursor: pointer; flex-shrink: 0;
+  }
+  #new-game-btn:active { transform: scale(0.9); }
+
+  #board-wrap {
+    flex: 1; display: flex; align-items: center;
+    justify-content: center; width: 100%;
+    padding: 4px; min-height: 0;
+  }
+  #board-svg {
+    max-width: min(100vw, calc(100dvh - 160px));
+    max-height: min(100vw, calc(100dvh - 160px));
+    width: 100%; height: 100%;
+    touch-action: manipulation; user-select: none;
+  }
+
+  #bottombar {
+    width: 100%; display: flex; align-items: center;
+    justify-content: space-around;
+    padding: 8px 12px env(safe-area-inset-bottom, 12px);
+    flex-shrink: 0; gap: 8px;
+  }
+  #players-bar { display: flex; gap: 6px; flex: 1; justify-content: center; flex-wrap: wrap; }
+  .player-chip {
+    display: flex; align-items: center; gap: 5px;
+    padding: 5px 10px; border-radius: 20px;
+    border: 2px solid transparent;
+    background: rgba(255,255,255,0.05);
+    font-size: 11px; color: rgba(255,255,255,0.5);
+    transition: all 0.2s;
+  }
+  .player-chip.active { color: #fff; font-weight: 700; }
+  .player-chip .chip-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .player-chip .pip-row { display: flex; gap: 3px; }
+  .player-chip .pip { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,0.2); }
+  .player-chip .pip.done { background: #ffd700; }
+
+  #dice-area { display: flex; flex-direction: column; align-items: center; gap: 4px; flex-shrink: 0; }
+  #dice-face { font-size: 48px; line-height: 1; user-select: none; transition: filter 0.08s; }
+  #dice-face.rolling { filter: blur(3px); }
+  #roll-btn {
+    padding: 10px 22px; border: none; border-radius: 10px;
+    font-size: 15px; font-weight: 700; cursor: pointer;
+    color: #fff; letter-spacing: 0.3px; transition: all 0.15s;
+  }
+  #roll-btn:active { transform: scale(0.93); }
+  #roll-btn:disabled { opacity: 0.4; transform: none; }
+  #move-hint { color: rgba(255,255,255,0.5); font-size: 11px; display: none; text-align: center; }
+
+  /* ---- WINNER ---- */
+  #winner-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.88); z-index: 200;
+    align-items: center; justify-content: center;
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  }
+  #winner-overlay.show { display: flex; }
+  #winner-card {
+    text-align: center; padding: 48px 40px;
+    border-radius: 24px; border: 3px solid rgba(255,255,255,0.2);
+    max-width: 280px; width: 85%;
+    animation: slideIn 0.4s ease;
+  }
+  #winner-card .trophy { font-size: 72px; }
+  #winner-card h2 { font-size: 42px; font-weight: 900; color: #fff; margin: 12px 0 6px; }
+  #winner-card p { color: rgba(255,255,255,0.7); font-size: 18px; margin-bottom: 28px; }
+  #play-again-btn { padding: 14px 36px; border: none; border-radius: 12px; font-size: 17px; font-weight: 700; color: #fff; cursor: pointer; }
+  #play-again-btn:active { transform: scale(0.95); }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: scale(0.8) translateY(20px); }
+    to   { opacity: 1; transform: scale(1) translateY(0); }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- INSTALL BANNER -->
+  <div id="install-banner">
+    <p>📲 Installez <span>Ludo</span> sur votre téléphone pour jouer hors-ligne !</p>
+    <button id="install-btn" onclick="installApp()">Installer</button>
+    <button id="dismiss-btn" onclick="dismissBanner()">✕</button>
+  </div>
+
+  <!-- MENU -->
+  <div id="menu">
+    <div class="dice-icon">🎲</div>
+    <h1>LUDO</h1>
+    <p class="sub">Le jeu de stratégie classique</p>
+    <div class="label">Nombre de joueurs</div>
+    <div class="player-btns">
+      <button class="player-btn" onclick="startGame(2)">2</button>
+      <button class="player-btn" onclick="startGame(3)">3</button>
+      <button class="player-btn" onclick="startGame(4)">4</button>
+    </div>
+    <div class="dots">
+      <div class="dot" style="background:#e53e3e;box-shadow:0 0 10px rgba(229,62,62,0.6)"></div>
+      <div class="dot" style="background:#3182ce;box-shadow:0 0 10px rgba(49,130,206,0.6)"></div>
+      <div class="dot" style="background:#38a169;box-shadow:0 0 10px rgba(56,161,105,0.6)"></div>
+      <div class="dot" style="background:#d69e2e;box-shadow:0 0 10px rgba(214,158,46,0.6)"></div>
+    </div>
+  </div>
+
+  <!-- GAME -->
+  <div id="game">
+    <div id="topbar">
+      <div class="title-small">🎲 LUDO</div>
+      <div id="msg-box">Bienvenue !</div>
+      <button id="new-game-btn" onclick="newGame()">🔄</button>
+    </div>
+    <div id="board-wrap">
+      <svg id="board-svg" viewBox="0 0 750 750" xmlns="http://www.w3.org/2000/svg"></svg>
+    </div>
+    <div id="bottombar">
+      <div id="players-bar"></div>
+      <div id="dice-area">
+        <div id="dice-face">⚀</div>
+        <button id="roll-btn" onclick="rollDice()">Lancer !</button>
+        <p id="move-hint">👆 Touchez un pion</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- WINNER -->
+  <div id="winner-overlay">
+    <div id="winner-card">
+      <div class="trophy">🏆</div>
+      <h2 id="winner-name"></h2>
+      <p>a gagné la partie !</p>
+      <button id="play-again-btn" onclick="newGame()">Rejouer 🎲</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// PWA — Service Worker & Install Prompt
+// ============================================================
+let deferredPrompt = null;
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js')
+      .then(reg => console.log('SW enregistré :', reg.scope))
+      .catch(err => console.log('SW erreur :', err));
+  });
+}
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  document.getElementById('install-banner').classList.add('show');
+});
+
+window.addEventListener('appinstalled', () => {
+  document.getElementById('install-banner').classList.remove('show');
+  deferredPrompt = null;
+});
+
+function installApp() {
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  deferredPrompt.userChoice.then(() => {
+    deferredPrompt = null;
+    document.getElementById('install-banner').classList.remove('show');
+  });
+}
+
+function dismissBanner() {
+  document.getElementById('install-banner').classList.remove('show');
+}
+
+// ============================================================
+// GAME CONSTANTS
+// ============================================================
+const COLORS = ["red","blue","green","yellow"];
+const COLOR_NAMES = {red:"Rouge",blue:"Bleu",green:"Vert",yellow:"Jaune"};
+const CS = {
+  red:    {home:"#e53e3e",light:"#fed7d7",dark:"#c53030",token:"#fc8181",glow:"rgba(229,62,62,0.7)"},
+  blue:   {home:"#3182ce",light:"#bee3f8",dark:"#2b6cb0",token:"#63b3ed",glow:"rgba(49,130,206,0.7)"},
+  green:  {home:"#38a169",light:"#c6f6d5",dark:"#276749",token:"#68d391",glow:"rgba(56,161,105,0.7)"},
+  yellow: {home:"#d69e2e",light:"#fefcbf",dark:"#b7791f",token:"#f6e05e",glow:"rgba(214,158,46,0.7)"},
+};
+const C = 50;
+const MAIN_PATH = [
+  [6,1],[6,2],[6,3],[6,4],[6,5],
+  [5,5],[4,5],[3,5],[2,5],[1,5],[0,5],[0,6],
+  [0,7],[0,8],[0,9],
+  [1,9],[2,9],[3,9],[4,9],[5,9],[5,10],[5,11],[5,12],[5,13],
+  [5,14],[6,14],[7,14],[8,14],[9,14],[9,13],[9,12],[9,11],[9,10],[9,9],
+  [10,9],[11,9],[12,9],[13,9],[14,9],[14,8],
+  [14,7],[14,6],[14,5],
+  [13,5],[12,5],[11,5],[10,5],[9,5],[9,4],[9,3],[9,2],[9,1],
+  [9,0],[8,0],[7,0],
+];
+const HOME_PATHS = {
+  red:    [[7,1],[7,2],[7,3],[7,4],[7,5],[7,6]],
+  blue:   [[1,7],[2,7],[3,7],[4,7],[5,7],[6,7]],
+  green:  [[7,13],[7,12],[7,11],[7,10],[7,9],[7,8]],
+  yellow: [[13,7],[12,7],[11,7],[10,7],[9,7],[8,7]],
+};
+const START_POS  = {red:0, blue:13, green:26, yellow:39};
+const HOME_ENTRY = {red:50, blue:11, green:24, yellow:37};
+const SAFE_POS   = new Set([0,8,13,21,26,34,39,47]);
+const SVG_NS     = 'http://www.w3.org/2000/svg';
+
+// ============================================================
+// GAME STATE
+// ============================================================
+let G = null, rolling = false, diceVal = 1, validMoves = [];
+
+function initGameState(n) {
+  const activePlayers = COLORS.slice(0, n);
+  const players = {};
+  activePlayers.forEach(c => { players[c] = { tokens: [-1,-1,-1,-1], finished: 0 }; });
+  return { players, activePlayers, current: activePlayers[0], dice: null, phase: 'roll', winner: null };
+}
+
+function nextPlayer() {
+  const arr = G.activePlayers, i = arr.indexOf(G.current);
+  return arr[(i+1) % arr.length];
+}
+
+function getNewPos(color, pos, steps) {
+  if (pos === 72) return null;
+  if (pos >= 52) {
+    const step = pos - 52;
+    return step + steps > 5 ? null : 52 + step + steps;
+  }
+  const entry = HOME_ENTRY[color];
+  const dist = (entry - pos + 52) % 52;
+  if (steps > dist + 6) return null;
+  if (dist < steps) {
+    const inHome = steps - dist - 1;
+    return inHome > 5 ? null : 52 + inHome;
+  }
+  return (pos + steps) % 52;
+}
+
+function getValidMoves(color, dice) {
+  const p = G.players[color], moves = [];
+  p.tokens.forEach((pos, i) => {
+    if (pos === 72) return;
+    if (pos === -1) { if (dice === 6) moves.push(i); }
+    else { if (getNewPos(color, pos, dice) !== null) moves.push(i); }
+  });
+  return moves;
+}
+
+// ============================================================
+// ACTIONS
+// ============================================================
+function startGame(n) {
+  G = initGameState(n);
+  document.getElementById('menu').style.display = 'none';
+  document.getElementById('game').style.display = 'flex';
+  drawBoard();
+  updateUI();
+}
+
+function newGame() {
+  document.getElementById('winner-overlay').classList.remove('show');
+  document.getElementById('menu').style.display = '';
+  document.getElementById('game').style.display = 'none';
+  G = null;
+}
+
+function rollDice() {
+  if (!G || G.phase !== 'roll' || rolling) return;
+  rolling = true;
+  updateUI();
+  let count = 0;
+  const interval = setInterval(() => {
+    diceVal = Math.floor(Math.random()*6)+1;
+    const dEl = document.getElementById('dice-face');
+    dEl.className = 'rolling';
+    dEl.textContent = ['','⚀','⚁','⚂','⚃','⚄','⚅'][diceVal];
+    count++;
+    if (count >= 12) {
+      clearInterval(interval);
+      const result = Math.floor(Math.random()*6)+1;
+      diceVal = result;
+      const dEl2 = document.getElementById('dice-face');
+      dEl2.className = '';
+      dEl2.textContent = ['','⚀','⚁','⚂','⚃','⚄','⚅'][result];
+      rolling = false;
+      G.dice = result;
+      const moves = getValidMoves(G.current, result);
+      if (moves.length === 0) {
+        setMsg(`${COLOR_NAMES[G.current]} : ${result} — aucun coup possible`);
+        G.phase = 'roll'; G.dice = null;
+        G.current = nextPlayer();
+        validMoves = [];
+      } else {
+        G.phase = 'move'; validMoves = moves;
+        setMsg(`${COLOR_NAMES[G.current]} a fait ${result} — touchez un pion !`);
+      }
+      updateUI();
+    }
+  }, 75);
+}
+
+function moveToken(tidx) {
+  if (!G || G.phase !== 'move' || !validMoves.includes(tidx)) return;
+  const color = G.current, p = G.players[color];
+  const pos = p.tokens[tidx];
+  let newPos = pos === -1 ? START_POS[color] : getNewPos(color, pos, G.dice);
+  if (newPos === null) return;
+
+  p.tokens[tidx] = newPos;
+  let extraTurn = G.dice === 6, captureMsg = '';
+
+  if (newPos < 52 && !SAFE_POS.has(newPos)) {
+    G.activePlayers.forEach(other => {
+      if (other === color) return;
+      G.players[other].tokens.forEach((op, oi) => {
+        if (op === newPos) {
+          G.players[other].tokens[oi] = -1;
+          captureMsg = ` 💥 Pion ${COLOR_NAMES[other]} capturé !`;
+          extraTurn = true;
+        }
+      });
+    });
+  }
+  if (newPos === 57) { p.tokens[tidx] = 72; p.finished++; extraTurn = true; }
+
+  if (p.finished >= 4) {
+    G.winner = color; G.phase = 'done'; validMoves = [];
+    showWinner(color); updateUI(); return;
+  }
+
+  G.phase = 'roll'; G.dice = null; validMoves = [];
+  if (extraTurn) {
+    setMsg(`${COLOR_NAMES[color]} rejoue !${captureMsg}`);
+  } else {
+    G.current = nextPlayer();
+    setMsg(`Au tour de ${COLOR_NAMES[G.current]} !`);
+  }
+  updateUI();
+}
+
+function showWinner(color) {
+  const ov = document.getElementById('winner-overlay');
+  const card = document.getElementById('winner-card');
+  document.getElementById('winner-name').textContent = COLOR_NAMES[color];
+  card.style.background = `radial-gradient(circle, ${CS[color].home}44, ${CS[color].home}11)`;
+  card.style.borderColor = CS[color].home;
+  document.getElementById('play-again-btn').style.background = CS[color].home;
+  document.getElementById('play-again-btn').style.boxShadow = `0 6px 24px ${CS[color].glow}`;
+  ov.classList.add('show');
+}
+
+function setMsg(txt) {
+  const mb = document.getElementById('msg-box');
+  mb.textContent = txt;
+  if (G) {
+    mb.style.borderColor = CS[G.current].home + '99';
+    mb.style.background = CS[G.current].home + '22';
+  }
+}
+
+function updateUI() {
+  drawBoard();
+  const show = G && G.phase === 'roll' && !G.winner;
+  const rollBtn = document.getElementById('roll-btn');
+  const moveHint = document.getElementById('move-hint');
+  rollBtn.style.display = show ? '' : 'none';
+  rollBtn.disabled = rolling;
+  moveHint.style.display = G && G.phase === 'move' ? '' : 'none';
+  if (G && show) {
+    rollBtn.style.background = `linear-gradient(135deg, ${CS[G.current].home}, ${CS[G.current].dark})`;
+    rollBtn.style.boxShadow = `0 4px 20px ${CS[G.current].glow}`;
+    rollBtn.textContent = rolling ? '...' : 'Lancer !';
+    if (!G.winner) setMsg(`Au tour de ${COLOR_NAMES[G.current]} — Lancez le dé !`);
+  }
+  updatePlayersBar();
+}
+
+function updatePlayersBar() {
+  if (!G) return;
+  const bar = document.getElementById('players-bar');
+  bar.innerHTML = '';
+  G.activePlayers.forEach(color => {
+    const p = G.players[color];
+    const chip = document.createElement('div');
+    chip.className = 'player-chip' + (color === G.current ? ' active' : '');
+    chip.style.borderColor = color === G.current ? CS[color].home : 'transparent';
+    chip.style.background = color === G.current ? CS[color].home+'33' : 'rgba(255,255,255,0.05)';
+    const dot = document.createElement('div');
+    dot.className = 'chip-dot';
+    dot.style.background = CS[color].home;
+    if (color === G.current) dot.style.boxShadow = `0 0 8px ${CS[color].glow}`;
+    const name = document.createElement('span');
+    name.textContent = COLOR_NAMES[color];
+    const pips = document.createElement('div');
+    pips.className = 'pip-row';
+    const finished = p.tokens.filter(t=>t===72).length;
+    const onBoard = p.tokens.filter(t=>t>=0&&t<72).length;
+    for (let i=0;i<4;i++) {
+      const pip = document.createElement('div');
+      pip.className = 'pip' + (i < finished ? ' done' : '');
+      if (i >= finished && i < finished + onBoard) pip.style.background = CS[color].home;
+      pips.appendChild(pip);
+    }
+    chip.appendChild(dot); chip.appendChild(name); chip.appendChild(pips);
+    bar.appendChild(chip);
+  });
+}
+
+// ============================================================
+// SVG BOARD
+// ============================================================
+function svgEl(tag, attrs) {
+  const el = document.createElementNS(SVG_NS, tag);
+  for (const [k,v] of Object.entries(attrs)) el.setAttribute(k,v);
+  return el;
+}
+function cellCenter(r, c) { return { x: c*C+C/2, y: r*C+C/2 }; }
+
+function drawBoard() {
+  const svg = document.getElementById('board-svg');
+  svg.innerHTML = '';
+
+  // Defs for gradients
+  const defs = svgEl('defs',{});
+  const grad = svgEl('radialGradient',{id:'cg',cx:'50%',cy:'50%',r:'50%'});
+  [['0%','#ffd700'],['40%','#ff6b35'],['100%','#7b2ff7']].forEach(([o,c]) => {
+    const s = svgEl('stop',{offset:o,'stop-color':c}); grad.appendChild(s);
+  });
+  defs.appendChild(grad);
+  svg.appendChild(defs);
+
+  // Background
+  svg.appendChild(svgEl('rect',{x:0,y:0,width:750,height:750,fill:'#f8f4e8',rx:10}));
+
+  // Cells
+  for (let r=0;r<15;r++) {
+    for (let c=0;c<15;c++) {
+      const isHomeRed    = r>=9&&r<=13&&c>=1&&c<=5;
+      const isHomeBlue   = r>=1&&r<=5&&c>=1&&c<=5;
+      const isHomeGreen  = r>=1&&r<=5&&c>=9&&c<=13;
+      const isHomeYellow = r>=9&&r<=13&&c>=9&&c<=13;
+      const isCenter     = r>=6&&r<=8&&c>=6&&c<=8;
+      if (isHomeRed||isHomeBlue||isHomeGreen||isHomeYellow||isCenter) continue;
+
+      const pathIdx = MAIN_PATH.findIndex(([pr,pc])=>pr===r&&pc===c);
+      let homePath = null, homePathIdx = -1;
+      for (const [col,path] of Object.entries(HOME_PATHS)) {
+        const idx = path.findIndex(([pr,pc])=>pr===r&&pc===c);
+        if (idx>=0) { homePath=col; homePathIdx=idx; }
+      }
+
+      let fill = '#f8f4e8';
+      if (homePath) fill = CS[homePath].light;
+      if (SAFE_POS.has(pathIdx) && pathIdx>=0) fill = '#e8f5e9';
+      for (const [col,sp] of Object.entries(START_POS)) {
+        if (sp===pathIdx && G && G.activePlayers.includes(col)) fill = CS[col].light;
+      }
+      if (homePathIdx===5) fill='#fff9c4';
+
+      svg.appendChild(svgEl('rect',{
+        x:c*C+0.5,y:r*C+0.5,width:C-1,height:C-1,
+        fill,stroke:'rgba(0,0,0,0.1)','stroke-width':'0.5',rx:'1'
+      }));
+
+      if (homePath && homePathIdx>=0) {
+        svg.appendChild(svgEl('rect',{x:c*C+5,y:r*C+5,width:C-10,height:C-10,fill:CS[homePath].home+'44',rx:'3'}));
+      }
+      if (SAFE_POS.has(pathIdx) && pathIdx>=0) {
+        const {x,y} = cellCenter(r,c);
+        const t = svgEl('text',{x,y:y+5,fill:'rgba(0,130,0,0.35)','font-size':'16','text-anchor':'middle'});
+        t.textContent='⭐'; svg.appendChild(t);
+      }
+    }
+  }
+
+  // Home bases
+  ['red','blue','green','yellow'].forEach(color => {
+    const rows={red:9,blue:1,green:1,yellow:9}, cols={red:1,blue:1,green:9,yellow:9};
+    const sr=rows[color], sc=cols[color];
+    const active = G && G.activePlayers.includes(color);
+    svg.appendChild(svgEl('rect',{
+      x:sc*C+3,y:sr*C+3,width:5*C-6,height:5*C-6,
+      fill: active ? CS[color].home : '#ccc',
+      stroke: active ? CS[color].dark : '#aaa',
+      'stroke-width':'3', rx:'10'
+    }));
+    if (active) {
+      const cx=sc*C+2.5*C, cy=sr*C+2.5*C;
+      svg.appendChild(svgEl('circle',{cx,cy,r:C*1.45,fill:'rgba(255,255,255,0.15)',stroke:'rgba(255,255,255,0.3)','stroke-width':'2'}));
+    }
+  });
+
+  // Center star
+  const cx2=375,cy2=375,R=68,r2=30;
+  const pts=[];
+  for(let i=0;i<10;i++){
+    const a=Math.PI*i/5-Math.PI/2, rad=i%2===0?R:r2;
+    pts.push(`${cx2+rad*Math.cos(a)},${cy2+rad*Math.sin(a)}`);
+  }
+  svg.appendChild(svgEl('polygon',{points:pts.join(' '),fill:'url(#cg)'}));
+
+  if (!G) return;
+
+  // Tokens
+  G.activePlayers.forEach(color => {
+    const p = G.players[color];
+    p.tokens.forEach((pos, tidx) => {
+      if (pos === 72) return;
+      let x, y;
+      const isValid = validMoves.includes(tidx) && color === G.current;
+
+      if (pos === -1) {
+        const offs=[[1,1],[1,3],[3,1],[3,3]];
+        const [dr,dc]=offs[tidx];
+        const br={red:9,blue:1,green:1,yellow:9}, bc={red:1,blue:1,green:9,yellow:9};
+        const center=cellCenter(br[color]+dr, bc[color]+dc);
+        x=center.x; y=center.y;
+      } else if (pos < 52) {
+        const [r,c]=MAIN_PATH[pos]; const center=cellCenter(r,c); x=center.x; y=center.y;
+      } else {
+        const step=pos-52;
+        if (step < HOME_PATHS[color].length) {
+          const [r,c]=HOME_PATHS[color][step]; const center=cellCenter(r,c); x=center.x; y=center.y;
+        }
+      }
+      if (x===undefined) return;
+
+      // Gradient
+      const gid=`tg_${color}_${tidx}`;
+      const rg=svgEl('radialGradient',{id:gid,cx:'35%',cy:'35%',r:'65%'});
+      [[0,CS[color].token],[1,CS[color].home]].forEach(([o,col])=>{
+        const s=svgEl('stop',{offset:o,'stop-color':col}); rg.appendChild(s);
+      });
+      svg.querySelector('defs').appendChild(rg);
+
+      const g=svgEl('g',{});
+
+      // Shadow
+      g.appendChild(svgEl('circle',{cx:x+2,cy:y+3,r:'11',fill:'rgba(0,0,0,0.3)'}));
+
+      // Glow ring for valid moves
+      if (isValid) {
+        const glowCircle=svgEl('circle',{cx:x,cy:y,r:'15',fill:'none',stroke:CS[color].home,'stroke-width':'2.5',opacity:'0.8'});
+        glowCircle.innerHTML=`<animate attributeName="r" values="13;18;13" dur="0.85s" repeatCount="indefinite"/>
+          <animate attributeName="opacity" values="0.8;0.15;0.8" dur="0.85s" repeatCount="indefinite"/>`;
+        g.appendChild(glowCircle);
+      }
+
+      // Token
+      const circle=svgEl('circle',{cx:x,cy:y,r:'12',fill:`url(#${gid})`,stroke:isValid?'#fff':CS[color].dark,'stroke-width':isValid?'2.5':'1.5'});
+      g.appendChild(circle);
+
+      // Number
+      const num=svgEl('text',{x,y:y+4.5,fill:color==='yellow'?'#444':'#fff','font-size':'10','font-weight':'bold','text-anchor':'middle','pointer-events':'none'});
+      num.textContent=tidx+1; g.appendChild(num);
+
+      if (isValid) {
+        g.style.cursor='pointer';
+        g.addEventListener('click',()=>moveToken(tidx));
+        g.addEventListener('touchend',(e)=>{e.preventDefault();moveToken(tidx);},{passive:false});
+      }
+      svg.appendChild(g);
+    });
+  });
+
+  // Finished tokens in center
+  let fi=0;
+  G.activePlayers.forEach(color=>{
+    G.players[color].tokens.forEach(pos=>{
+      if(pos!==72) return;
+      const offs=[[-20,-20],[20,-20],[-20,20],[20,20]];
+      const [ox,oy]=offs[fi%4]||[0,0]; fi++;
+      svg.appendChild(svgEl('circle',{cx:375+ox,cy:375+oy,r:'9',fill:CS[color].home,stroke:'#fff','stroke-width':'1.5'}));
+    });
+  });
+}
+</script>
+</body>
+</html>
